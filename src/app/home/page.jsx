@@ -1,3 +1,4 @@
+"use client"
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronRight, Shield, Database, Users, Fingerprint, ArrowRight, Menu, X, Check } from 'lucide-react';
