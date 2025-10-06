@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
-import VerificationRequest from "@/models/verificationRequest";
+import VerificationRequest from "@/models/VerificationRequest";
 import Certificate from "@/models/certificate";
 import User from "@/models/user";
 import crypto from "crypto";

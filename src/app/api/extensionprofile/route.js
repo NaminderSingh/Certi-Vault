@@ -1,7 +1,7 @@
 import connectDB from "@/lib/db";
 import Certificate from "@/models/certificate";
 import User from "@/models/user";
-import VerificationRequest from "@/models/verificationRequest";
+import VerificationRequest from "@/models/VerificationRequest";
 import jwt from "jsonwebtoken";
 
 export async function GET(req) {
