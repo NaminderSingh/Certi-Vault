@@ -7,7 +7,7 @@ import VerificationRequest from "@/models/VerificationRequest";
 
 export async function GET(req) {
   await connectDB();
-
+//hello form 
   try {
     // Get user session
     const session = await getServerSession(authOptions);
