@@ -1,7 +1,7 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   Shield, 
   FileText, 
@@ -13,75 +13,101 @@ import {
   TrendingUp,
   Eye,
   Plus,
-  Search,
-  Filter,
   Download,
-  Verified
+  Verified,
+  Loader2
 } from "lucide-react";
 import Link from "next/link";
 
 export default function InstitutionDashboard() {
-  const { data: session } = useSession();
-  const [searchQuery, setSearchQuery] = useState("");
+  const { data: session, status } = useSession();
+  const [stats, setStats] = useState({
+    totalCertificates: 0,
+    pendingRequests: 0,
+    approvedToday: 0,
+    totalStudents: 0
+  });
+  const [recentRequests, setRecentRequests] = useState([]);
+  const [institutionInfo, setInstitutionInfo] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Mock data for demonstration
-  const stats = {
-    totalCertificates: 1247,
-    pendingRequests: 23,
-    approvedToday: 8,
-    totalStudents: 892
+  useEffect(() => {
+    if (status === 'authenticated') {
+      fetchDashboardStats();
+    }
+  }, [status]);
+
+  const fetchDashboardStats = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const res = await fetch('/api/certifictes/institutiondash');
+      
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Failed to fetch dashboard stats');
+      }
+
+      const data = await res.json();
+      
+      if (data.success) {
+        setStats(data.stats);
+        setRecentRequests(data.recentRequests || []);
+        setInstitutionInfo(data.institution);
+      }
+    } catch (err) {
+      console.error('Error fetching dashboard stats:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const recentRequests = [
-    {
-      id: 1,
-      studentName: "John Smith",
-      certificateType: "Bachelor of Science",
-      submissionDate: "2025-09-27",
-      status: "pending",
-      priority: "high"
-    },
-    {
-      id: 2,
-      studentName: "Sarah Johnson",
-      certificateType: "Master of Arts",
-      submissionDate: "2025-09-26",
-      status: "pending",
-      priority: "medium"
-    },
-    {
-      id: 3,
-      studentName: "Michael Brown",
-      certificateType: "PhD Computer Science",
-      submissionDate: "2025-09-25",
-      status: "approved",
-      priority: "low"
-    }
-  ];
+  const formatDate = (dateStr) => {
+    return new Date(dateStr).toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric' 
+    });
+  };
 
-  const recentActivity = [
-    {
-      id: 1,
-      action: "Certificate Issued",
-      student: "Alice Wilson",
-      certificate: "Bachelor of Engineering",
-      timestamp: "2 hours ago"
-    },
-    {
-      id: 2,
-      action: "Request Approved",
-      student: "David Lee",
-      certificate: "Master of Business Administration",
-      timestamp: "4 hours ago"
-    },
-    {
-      id: 3,
-      action: "Digital Signature Applied",
-      student: "Emma Davis",
-      certificate: "Bachelor of Arts",
-      timestamp: "6 hours ago"
+  const getStatusColor = (status) => {
+    switch(status) {
+      case 'pending':
+        return 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30';
+      case 'approved':
+        return 'bg-green-500/20 text-green-400 border border-green-500/30';
+      case 'rejected':
+        return 'bg-red-500/20 text-red-400 border border-red-500/30';
+      default:
+        return 'bg-slate-500/20 text-slate-400 border border-slate-500/30';
     }
-  ];
+  };
+
+  if (status === 'loading' || loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 text-cyan-400 animate-spin mx-auto mb-4" />
+          <p className="text-slate-300">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === 'unauthenticated') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+        <div className="text-center bg-slate-800/30 backdrop-blur-md border border-slate-700 rounded-2xl p-8">
+          <Shield className="w-16 h-16 text-slate-400 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-white mb-4">Sign In Required</h2>
+          <p className="text-slate-400">Please sign in to view your dashboard.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white">
@@ -103,10 +129,20 @@ export default function InstitutionDashboard() {
           <div className="bg-slate-800/30 backdrop-blur-md border border-slate-700 rounded-2xl p-4">
             <p className="text-slate-300">
               <span className="text-cyan-400 font-semibold">Role:</span> {session?.user?.role} • 
-              <span className="text-cyan-400 font-semibold ml-2">Institution:</span> Your Institution Name
+              <span className="text-cyan-400 font-semibold ml-2">Institution:</span> {institutionInfo?.name || 'Your Institution'}
             </p>
           </div>
         </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="mb-6 bg-red-500/20 border border-red-500/50 rounded-xl p-4">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-red-400" />
+              <p className="text-red-400">{error}</p>
+            </div>
+          </div>
+        )}
 
         {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -119,8 +155,8 @@ export default function InstitutionDashboard() {
               <Award className="w-10 h-10 text-cyan-400" />
             </div>
             <div className="flex items-center gap-2 mt-4">
-              <TrendingUp className="w-4 h-4 text-green-400" />
-              <span className="text-green-400 text-sm">+12% this month</span>
+              <CheckCircle className="w-4 h-4 text-cyan-400" />
+              <span className="text-cyan-400 text-sm">Verified by you</span>
             </div>
           </div>
 
@@ -134,7 +170,9 @@ export default function InstitutionDashboard() {
             </div>
             <div className="flex items-center gap-2 mt-4">
               <AlertCircle className="w-4 h-4 text-yellow-400" />
-              <span className="text-yellow-400 text-sm">Requires attention</span>
+              <span className="text-yellow-400 text-sm">
+                {stats.pendingRequests > 0 ? 'Requires attention' : 'All caught up'}
+              </span>
             </div>
           </div>
 
@@ -148,7 +186,9 @@ export default function InstitutionDashboard() {
             </div>
             <div className="flex items-center gap-2 mt-4">
               <Verified className="w-4 h-4 text-green-400" />
-              <span className="text-green-400 text-sm">All verified</span>
+              <span className="text-green-400 text-sm">
+                {stats.approvedToday > 0 ? 'Great progress!' : 'No approvals yet'}
+              </span>
             </div>
           </div>
 
@@ -162,7 +202,7 @@ export default function InstitutionDashboard() {
             </div>
             <div className="flex items-center gap-2 mt-4">
               <TrendingUp className="w-4 h-4 text-green-400" />
-              <span className="text-green-400 text-sm">+5% this week</span>
+              <span className="text-green-400 text-sm">Verified students</span>
             </div>
           </div>
         </div>
@@ -215,9 +255,8 @@ export default function InstitutionDashboard() {
           </div>
         </div>
 
-        {/* Recent Requests and Activity */}
-        <div className="grid lg:grid-cols-2 gap-8">
-          {/* Recent Verification Requests */}
+        {/* Recent Requests */}
+        <div className="mb-8">
           <div className="bg-slate-800/30 backdrop-blur-md border border-slate-700 rounded-2xl p-6">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold text-cyan-400">Recent Verification Requests</h2>
@@ -226,64 +265,36 @@ export default function InstitutionDashboard() {
               </Link>
             </div>
 
-            <div className="space-y-4">
-              {recentRequests.map((request) => (
-                <div key={request.id} className="bg-slate-700/30 border border-slate-600 rounded-xl p-4 hover:border-cyan-500/50 transition-all">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-semibold text-white">{request.studentName}</p>
-                      <p className="text-slate-400 text-sm">{request.certificateType}</p>
-                      <p className="text-slate-500 text-xs">{request.submissionDate}</p>
-                    </div>
-                    <div className="text-right">
-                      <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${
-                        request.status === 'pending' 
-                          ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30' 
-                          : 'bg-green-500/20 text-green-400 border border-green-500/30'
-                      }`}>
-                        {request.status}
-                      </span>
-                      <p className={`text-xs mt-1 ${
-                        request.priority === 'high' ? 'text-red-400' :
-                        request.priority === 'medium' ? 'text-yellow-400' : 'text-green-400'
-                      }`}>
-                        {request.priority} priority
-                      </p>
+            {recentRequests.length === 0 ? (
+              <div className="text-center py-8">
+                <FileText className="w-12 h-12 text-slate-400 mx-auto mb-3" />
+                <p className="text-slate-400">No verification requests yet</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {recentRequests.map((request) => (
+                  <div key={request.id} className="bg-slate-700/30 border border-slate-600 rounded-xl p-4 hover:border-cyan-500/50 transition-all">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-semibold text-white">{request.studentName}</p>
+                        <p className="text-slate-400 text-sm">{request.certificateType}</p>
+                        <p className="text-slate-500 text-xs">{formatDate(request.submissionDate)}</p>
+                      </div>
+                      <div className="text-right">
+                        <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(request.status)}`}>
+                          {request.status}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Recent Activity */}
-          <div className="bg-slate-800/30 backdrop-blur-md border border-slate-700 rounded-2xl p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-cyan-400">Recent Activity</h2>
-              <button className="text-cyan-400 hover:text-cyan-300 transition-colors text-sm flex items-center gap-1">
-                Export <Download className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              {recentActivity.map((activity) => (
-                <div key={activity.id} className="flex items-center gap-4 p-3 bg-slate-700/20 rounded-xl">
-                  <div className="w-10 h-10 bg-gradient-to-r from-cyan-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
-                    <CheckCircle className="w-5 h-5 text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-white">{activity.action}</p>
-                    <p className="text-slate-400 text-sm">{activity.student} • {activity.certificate}</p>
-                    <p className="text-slate-500 text-xs">{activity.timestamp}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
         {/* Key Features */}
-        <div className="mt-8 bg-slate-800/20 border border-slate-700 rounded-2xl p-6">
+        <div className="bg-slate-800/20 border border-slate-700 rounded-2xl p-6">
           <h2 className="text-xl font-bold mb-4 text-cyan-400">Institution Capabilities</h2>
           <div className="grid md:grid-cols-3 gap-6">
             <div className="flex items-center gap-3">

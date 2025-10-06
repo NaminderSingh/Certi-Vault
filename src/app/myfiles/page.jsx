@@ -15,7 +15,8 @@ import {
   FolderOpen,
   User,
   Send,
-  X
+  X,
+  Trash2
 } from 'lucide-react';
 
 const CertificatesViewer = () => {
@@ -36,6 +37,11 @@ const CertificatesViewer = () => {
   const [verifyEmail, setVerifyEmail] = useState('');
   const [verifyCert, setVerifyCert] = useState(null);
   const [sendingRequest, setSendingRequest] = useState(false);
+
+  // Delete modal state
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [certToDelete, setCertToDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (status === 'authenticated') fetchCertificates();
@@ -82,6 +88,39 @@ const CertificatesViewer = () => {
     setVerifyCert(certificate);
     setVerifyEmail('');
     setShowVerifyModal(true);
+  };
+
+  const handleDeleteClick = (certificate) => {
+    setCertToDelete(certificate);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!certToDelete || !certToDelete._id) return;
+
+    setDeleting(true);
+    try {
+      const res = await fetch('/api/certifictes/delete', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ certificateId: certToDelete._id })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to delete certificate');
+
+      alert('Certificate deleted successfully');
+      setShowDeleteModal(false);
+      setCertToDelete(null);
+      
+      // Refresh certificates list
+      fetchCertificates();
+    } catch (err) {
+      console.error(err);
+      alert('Error deleting certificate: ' + err.message);
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const submitVerificationRequest = async () => {
@@ -340,6 +379,13 @@ const CertificatesViewer = () => {
                   >
                     <Download className="w-4 h-4" /> Download
                   </button>
+                  <button 
+                    onClick={() => handleDeleteClick(cert)} 
+                    className="flex items-center justify-center gap-2 text-sm py-2 px-3 rounded-xl transition-all duration-200 transform hover:scale-105 bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white"
+                    title="Delete Certificate"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
             ))}
@@ -431,6 +477,66 @@ const CertificatesViewer = () => {
                   'Send Request'
                 )}
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Confirmation Modal */}
+        {showDeleteModal && certToDelete && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+            <div className="bg-slate-800 p-6 rounded-2xl max-w-md w-full relative border border-red-700 shadow-2xl">
+              <button 
+                onClick={() => setShowDeleteModal(false)} 
+                className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors"
+                disabled={deleting}
+              >
+                <X className="w-5 h-5" />
+              </button>
+              
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 bg-red-500/20 rounded-xl flex items-center justify-center">
+                  <AlertCircle className="w-6 h-6 text-red-400" />
+                </div>
+                <h2 className="text-xl font-bold text-white">Delete Certificate</h2>
+              </div>
+              
+              <p className="text-slate-300 mb-2">
+                Are you sure you want to delete this certificate?
+              </p>
+              <p className="text-slate-400 text-sm mb-4">
+                <span className="font-semibold text-white">{certToDelete.title}</span>
+              </p>
+              
+              <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 mb-6">
+                <p className="text-red-400 text-sm">
+                  <strong>Warning:</strong> This action cannot be undone. This will permanently delete the certificate and all associated verification requests.
+                </p>
+              </div>
+
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => setShowDeleteModal(false)}
+                  disabled={deleting}
+                  className="flex-1 bg-slate-700 hover:bg-slate-600 text-white py-3 px-4 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={confirmDelete}
+                  disabled={deleting}
+                  className="flex-1 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white py-3 px-4 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {deleting ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin" /> Deleting...
+                    </span>
+                  ) : (
+                    <span className="flex items-center justify-center gap-2">
+                      <Trash2 className="w-4 h-4" /> Delete
+                    </span>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         )}

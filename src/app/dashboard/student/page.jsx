@@ -1,7 +1,7 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   Shield, 
   FileText, 
@@ -21,20 +21,75 @@ import {
   User,
   Calendar,
   FolderOpen,
-  Settings
+  Settings,
+  Loader2
 } from "lucide-react";
 import Link from "next/link";
 
 export default function StudentDashboard() {
-  const { data: session } = useSession();
-
-  // Mock stats - these would come from your API
-  const stats = {
-    totalCertificates: 0, // You can fetch this from API
+  const { data: session, status } = useSession();
+  const [stats, setStats] = useState({
+    totalCertificates: 0,
     verifiedCertificates: 0,
     pendingRequests: 0,
     sharedDocuments: 0
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (status === 'authenticated') {
+      fetchDashboardStats();
+    }
+  }, [status]);
+
+  const fetchDashboardStats = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const res = await fetch('/api/certifictes/studentdash');
+      
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Failed to fetch dashboard stats');
+      }
+
+      const data = await res.json();
+      
+      if (data.success) {
+        setStats(data.stats);
+      }
+    } catch (err) {
+      console.error('Error fetching dashboard stats:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  if (status === 'loading' || loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 text-cyan-400 animate-spin mx-auto mb-4" />
+          <p className="text-slate-300">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === 'unauthenticated') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+        <div className="text-center bg-slate-800/30 backdrop-blur-md border border-slate-700 rounded-2xl p-8">
+          <Shield className="w-16 h-16 text-slate-400 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-white mb-4">Sign In Required</h2>
+          <p className="text-slate-400">Please sign in to view your dashboard.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white">
@@ -61,6 +116,16 @@ export default function StudentDashboard() {
           </div>
         </div>
 
+        {/* Error Message */}
+        {error && (
+          <div className="mb-6 bg-red-500/20 border border-red-500/50 rounded-xl p-4">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-red-400" />
+              <p className="text-red-400">{error}</p>
+            </div>
+          </div>
+        )}
+
         {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div className="bg-slate-800/30 backdrop-blur-md border border-slate-700 rounded-2xl p-6 hover:border-cyan-500/50 transition-all">
@@ -73,7 +138,9 @@ export default function StudentDashboard() {
             </div>
             <div className="flex items-center gap-2 mt-4">
               <TrendingUp className="w-4 h-4 text-green-400" />
-              <span className="text-green-400 text-sm">Ready to upload more</span>
+              <span className="text-green-400 text-sm">
+                {stats.totalCertificates > 0 ? 'Keep uploading!' : 'Ready to upload'}
+              </span>
             </div>
           </div>
 
@@ -87,7 +154,9 @@ export default function StudentDashboard() {
             </div>
             <div className="flex items-center gap-2 mt-4">
               <Verified className="w-4 h-4 text-green-400" />
-              <span className="text-green-400 text-sm">Authenticity confirmed</span>
+              <span className="text-green-400 text-sm">
+                {stats.verifiedCertificates > 0 ? 'Authenticity confirmed' : 'Request verification'}
+              </span>
             </div>
           </div>
 
@@ -101,7 +170,9 @@ export default function StudentDashboard() {
             </div>
             <div className="flex items-center gap-2 mt-4">
               <AlertCircle className="w-4 h-4 text-yellow-400" />
-              <span className="text-yellow-400 text-sm">Awaiting approval</span>
+              <span className="text-yellow-400 text-sm">
+                {stats.pendingRequests > 0 ? 'Awaiting approval' : 'No pending requests'}
+              </span>
             </div>
           </div>
 
@@ -246,11 +317,12 @@ export default function StudentDashboard() {
           <div className="text-center">
             <h2 className="text-xl font-bold mb-4 text-cyan-400">Need Help?</h2>
             <p className="text-slate-400 mb-6">
-              CertiVault makes certificate management simple and secure. Start by uploading your first certificate!
+              CertiVault makes certificate management simple and secure. 
+              {stats.totalCertificates === 0 ? ' Start by uploading your first certificate!' : ' Continue managing your certificates!'}
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href="/dashboard/student/upload" className="bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-600 hover:to-purple-700 text-white px-6 py-3 rounded-xl transition-all duration-300 transform hover:scale-105 font-semibold">
-                Upload First Certificate
+                {stats.totalCertificates === 0 ? 'Upload First Certificate' : 'Upload More'}
               </Link>
               <Link href="/myfiles" className="border border-slate-600 hover:border-cyan-500 text-slate-300 hover:text-cyan-400 px-6 py-3 rounded-xl transition-all duration-300 font-semibold">
                 Browse My Files
