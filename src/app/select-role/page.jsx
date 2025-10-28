@@ -32,7 +32,7 @@ export default function SelectRolePage() {
       >
         <option value="student">Student</option>
         <option value="institution">Institution</option>
-        <option value="verifier">employer</option>
+        <option value="employer">employer</option>
       </select>
 
       <button

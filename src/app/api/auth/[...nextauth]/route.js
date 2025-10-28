@@ -3,7 +3,7 @@ import GoogleProvider from "next-auth/providers/google";
 import GitHubProvider from "next-auth/providers/github";
 
 import User from "@/models/user";
-import { generateUserAesKey } from "@/lib/crypto/keys";
+import { generateEncryptionKey } from "@/utils/crypto"; // ✅ Updated import
 import connectDB from "@/lib/db";
 
 const handler = NextAuth({
@@ -34,12 +34,13 @@ const handler = NextAuth({
           image: user.image,
           provider: account.provider,
           role: null, // user must select role later
-          encryptionKey: generateUserAesKey(),
+          encryptionKey: generateEncryptionKey(), // ✅ Generate single AES key
         });
         await existingUser.save();
       } else {
+        // If existing user doesn't have encryption key, generate one
         if (!existingUser.encryptionKey) {
-          existingUser.encryptionKey = generateUserAesKey();
+          existingUser.encryptionKey = generateEncryptionKey(); // ✅ Updated function name
           await existingUser.save();
         }
       }

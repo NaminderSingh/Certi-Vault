@@ -89,7 +89,7 @@ export default function LoginPage() {
             <p className="text-sm text-slate-300 text-center">
               <span className="text-cyan-400 font-semibold">New to CertiVault?</span> 
               <br />
-              After signing in, you'll be prompted to select your role: Student, Institution, or Verifier
+              After signing in, you'll be prompted to select your role: Student, Institution, or Employer
             </p>
           </div>
         </div>

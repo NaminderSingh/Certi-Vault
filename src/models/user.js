@@ -1,3 +1,4 @@
+// models/User.js
 import mongoose from "mongoose";
 
 const UserSchema = new mongoose.Schema(
@@ -9,10 +10,11 @@ const UserSchema = new mongoose.Schema(
     role: {
       type: String,
       enum: ["student", "institution", "employer"],
-      default: null, // ⬅️ no default, user must pick role later
+      default: null, // user must pick role later
     },
-    // direct AES key for encrypting certificates (base64)
-    encryptionKey: { type: String }, // generated on first login
+    // Single AES key for all operations (encryption + HMAC signing)
+    // Generated on first login for all users (base64 encoded)
+    encryptionKey: { type: String },
   },
   { timestamps: true }
 );

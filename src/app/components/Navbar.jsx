@@ -82,22 +82,22 @@ export default function Navbar() {
         )}
 
         {/* Verifier Navigation */}
-        {session?.user?.role === "verifier" && (
+        {session?.user?.role === "employer" && (
           <div className="flex items-center gap-6">
             <Link 
-              href="/dashboard/verifier/verify" 
+              href="/dashboard/employer/view-shared" 
               className="text-slate-300 hover:text-cyan-400 transition-colors duration-200 font-medium"
             >
-              Verify Certificates
+              View shared Certificates
             </Link>
             <Link 
-              href="/dashboard/verifier/history" 
+              href="/dashboard/employer/history" 
               className="text-slate-300 hover:text-cyan-400 transition-colors duration-200 font-medium"
             >
               History
             </Link>
             <Link 
-              href="/dashboard/verifier/profile" 
+              href="/dashboard/employer/profile" 
               className="text-slate-300 hover:text-cyan-400 transition-colors duration-200 font-medium"
             >
               Profile

@@ -16,7 +16,10 @@ import {
   User,
   Send,
   X,
-  Trash2
+  Trash2,
+  Award,
+  Share2,
+  Check
 } from 'lucide-react';
 
 const CertificatesViewer = () => {
@@ -42,6 +45,13 @@ const CertificatesViewer = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [certToDelete, setCertToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Share modal state
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [selectedCerts, setSelectedCerts] = useState(new Set());
+  const [employerEmail, setEmployerEmail] = useState('');
+  const [sharing, setSharing] = useState(false);
+  const [isSelectMode, setIsSelectMode] = useState(false);
 
   useEffect(() => {
     if (status === 'authenticated') fetchCertificates();
@@ -154,6 +164,83 @@ const CertificatesViewer = () => {
       alert('Error sending verification: ' + err.message);
     } finally {
       setSendingRequest(false);
+    }
+  };
+
+  // Toggle select mode
+  const toggleSelectMode = () => {
+    setIsSelectMode(!isSelectMode);
+    setSelectedCerts(new Set());
+  };
+
+  // Toggle certificate selection
+  const toggleCertSelection = (certId) => {
+    const newSelected = new Set(selectedCerts);
+    if (newSelected.has(certId)) {
+      newSelected.delete(certId);
+    } else {
+      newSelected.add(certId);
+    }
+    setSelectedCerts(newSelected);
+  };
+
+  // Select all certificates
+  const selectAllCerts = () => {
+    if (selectedCerts.size === certificates.length) {
+      setSelectedCerts(new Set());
+    } else {
+      setSelectedCerts(new Set(certificates.map(c => c._id)));
+    }
+  };
+
+  // Open share modal
+  const openShareModal = () => {
+    if (selectedCerts.size === 0) {
+      alert('Please select at least one certificate to share');
+      return;
+    }
+    setEmployerEmail('');
+    setShowShareModal(true);
+  };
+
+  // Share certificates
+  const shareCertificates = async () => {
+    if (!employerEmail) {
+      alert('Please enter employer email');
+      return;
+    }
+
+    if (!validateEmail(employerEmail)) {
+      alert('Please enter a valid email address');
+      return;
+    }
+
+    setSharing(true);
+    try {
+      const certificateIds = Array.from(selectedCerts);
+      
+      const res = await fetch('/api/certifictes/share-certificates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          certificateIds,
+          employerEmail: employerEmail.trim().toLowerCase()
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to share certificates');
+
+      alert(`${certificateIds.length} certificate(s) shared successfully with ${employerEmail}`);
+      setShowShareModal(false);
+      setSelectedCerts(new Set());
+      setIsSelectMode(false);
+      setEmployerEmail('');
+    } catch (err) {
+      console.error(err);
+      alert('Error sharing certificates: ' + err.message);
+    } finally {
+      setSharing(false);
     }
   };
 
@@ -303,6 +390,49 @@ const CertificatesViewer = () => {
               )}
             </div>
           </div>
+
+          {/* Share Controls */}
+          {certificates.length > 0 && (
+            <div className="flex items-center gap-3">
+              {isSelectMode && (
+                <>
+                  <button
+                    onClick={selectAllCerts}
+                    className="flex items-center gap-2 bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-xl transition-all"
+                  >
+                    <Check className="w-4 h-4" />
+                    {selectedCerts.size === certificates.length ? 'Deselect All' : 'Select All'}
+                  </button>
+                  <button
+                    onClick={openShareModal}
+                    disabled={selectedCerts.size === 0}
+                    className="flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-600 hover:to-purple-700 text-white px-4 py-2 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Share2 className="w-4 h-4" />
+                    Share Selected ({selectedCerts.size})
+                  </button>
+                </>
+              )}
+              <button
+                onClick={toggleSelectMode}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all ${
+                  isSelectMode
+                    ? 'bg-red-600 hover:bg-red-700 text-white'
+                    : 'bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white'
+                }`}
+              >
+                {isSelectMode ? (
+                  <>
+                    <X className="w-4 h-4" /> Cancel
+                  </>
+                ) : (
+                  <>
+                    <Share2 className="w-4 h-4" /> Share Certificates
+                  </>
+                )}
+              </button>
+            </div>
+          )}
         </div>
 
         {loading ? (
@@ -329,26 +459,72 @@ const CertificatesViewer = () => {
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {certificates.map(cert => (
-              <div key={cert._id} className="bg-slate-800/30 backdrop-blur-md border border-slate-700 rounded-2xl p-6 hover:border-cyan-500/50 transition-all duration-300 transform hover:-translate-y-1">
+              <div 
+                key={cert._id} 
+                className={`bg-slate-800/30 backdrop-blur-md border rounded-2xl p-6 transition-all duration-300 transform hover:-translate-y-1 relative ${
+                  isSelectMode
+                    ? selectedCerts.has(cert._id)
+                      ? 'border-cyan-500 bg-cyan-500/10'
+                      : 'border-slate-700 hover:border-slate-600'
+                    : 'border-slate-700 hover:border-cyan-500/50'
+                }`}
+              >
+                {/* Selection Checkbox */}
+                {isSelectMode && (
+                  <div className="absolute top-4 right-4 z-10">
+                    <button
+                      onClick={() => toggleCertSelection(cert._id)}
+                      className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all ${
+                        selectedCerts.has(cert._id)
+                          ? 'bg-cyan-500 border-cyan-500'
+                          : 'bg-slate-700 border-slate-600 hover:border-cyan-500'
+                      }`}
+                    >
+                      {selectedCerts.has(cert._id) && (
+                        <Check className="w-4 h-4 text-white" />
+                      )}
+                    </button>
+                  </div>
+                )}
+
                 <div className="mb-4">
-                  <h3 className="text-xl font-semibold text-white mb-2 line-clamp-2">{cert.title}</h3>
+                  <h3 className="text-xl font-semibold text-white mb-2 line-clamp-2 pr-8">{cert.title}</h3>
                   {cert.description && <p className="text-slate-400 text-sm line-clamp-3 mb-3">{cert.description}</p>}
                   
-                  {cert.verifiedBy ? (
-                    <div className="flex items-center gap-2 text-green-400 text-sm">
-                      <CheckCircle className="w-4 h-4" /> Verified by {cert.verifiedBy}
+                  {/* Verification display */}
+                  {cert.isVerified ? (
+                    <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-3 mb-3">
+                      <div className="flex items-center gap-2 text-green-400 text-sm mb-1">
+                        <CheckCircle className="w-4 h-4" /> 
+                        <span className="font-semibold">Digitally Verified</span>
+                      </div>
+                      <div className="text-xs text-green-300/80 ml-6">
+                        <div className="flex items-center gap-1">
+                          <Award className="w-3 h-3" />
+                          <span>By: {cert.verifiedBy?.institutionName}</span>
+                        </div>
+                        {cert.verifiedBy?.verifiedAt && (
+                          <div className="flex items-center gap-1 mt-1">
+                            <Clock className="w-3 h-3" />
+                            <span>On: {formatDate(cert.verifiedBy.verifiedAt)}</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   ) : (
-                    <div className="flex flex-col gap-1 text-yellow-400 text-sm">
-                      <div className="flex items-center gap-2">
-                        <AlertCircle className="w-4 h-4" /> Not Verified
+                    <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-3 mb-3">
+                      <div className="flex items-center gap-2 text-yellow-400 text-sm mb-2">
+                        <AlertCircle className="w-4 h-4" /> 
+                        <span className="font-semibold">Not Verified</span>
                       </div>
-                      <button 
-                        onClick={() => handleSendVerification(cert)}
-                        className="flex items-center gap-2 text-xs bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded-xl transition-all duration-200"
-                      >
-                        <Send className="w-3 h-3" /> Send Verification Request
-                      </button>
+                      {!isSelectMode && (
+                        <button 
+                          onClick={() => handleSendVerification(cert)}
+                          className="flex items-center gap-2 text-xs bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-lg transition-all duration-200 w-full justify-center"
+                        >
+                          <Send className="w-3 h-3" /> Send Verification Request
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -366,29 +542,86 @@ const CertificatesViewer = () => {
                   )}
                 </div>
 
-                <div className="flex gap-2">
-                  <button 
-                    onClick={() => viewCertificate(cert)} 
-                    className="flex-1 flex items-center justify-center gap-2 text-sm py-2 px-4 rounded-xl transition-all duration-200 transform hover:scale-105 bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white"
-                  >
-                    <Eye className="w-4 h-4" /> View
-                  </button>
-                  <button 
-                    onClick={() => downloadCertificate(cert)} 
-                    className="flex-1 flex items-center justify-center gap-2 text-sm py-2 px-4 rounded-xl transition-all duration-200 transform hover:scale-105 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white"
-                  >
-                    <Download className="w-4 h-4" /> Download
-                  </button>
-                  <button 
-                    onClick={() => handleDeleteClick(cert)} 
-                    className="flex items-center justify-center gap-2 text-sm py-2 px-3 rounded-xl transition-all duration-200 transform hover:scale-105 bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white"
-                    title="Delete Certificate"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
+                {!isSelectMode && (
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => viewCertificate(cert)} 
+                      className="flex-1 flex items-center justify-center gap-2 text-sm py-2 px-4 rounded-xl transition-all duration-200 transform hover:scale-105 bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white"
+                    >
+                      <Eye className="w-4 h-4" /> View
+                    </button>
+                    <button 
+                      onClick={() => downloadCertificate(cert)} 
+                      className="flex-1 flex items-center justify-center gap-2 text-sm py-2 px-4 rounded-xl transition-all duration-200 transform hover:scale-105 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white"
+                    >
+                      <Download className="w-4 h-4" /> Download
+                    </button>
+                    <button 
+                      onClick={() => handleDeleteClick(cert)} 
+                      className="flex items-center justify-center gap-2 text-sm py-2 px-3 rounded-xl transition-all duration-200 transform hover:scale-105 bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white"
+                      title="Delete Certificate"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Share Modal */}
+        {showShareModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+            <div className="bg-slate-800 p-6 rounded-2xl max-w-md w-full relative border border-slate-700 shadow-2xl">
+              <button 
+                onClick={() => setShowShareModal(false)} 
+                className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 bg-cyan-500/20 rounded-xl flex items-center justify-center">
+                  <Share2 className="w-6 h-6 text-cyan-400" />
+                </div>
+                <h2 className="text-xl font-bold text-white">Share Certificates</h2>
+              </div>
+              
+              <p className="text-slate-300 mb-4">
+                Share <span className="font-semibold text-cyan-400">{selectedCerts.size}</span> certificate(s) with an employer
+              </p>
+              
+              <input 
+                type="email" 
+                placeholder="Employer Email Address" 
+                className="w-full p-3 rounded-xl mb-4 bg-slate-700 text-white border border-slate-600 focus:border-cyan-400 focus:outline-none transition-colors"
+                value={employerEmail}
+                onChange={(e) => setEmployerEmail(e.target.value)}
+              />
+              
+              <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-xl p-3 mb-4">
+                <p className="text-cyan-400 text-sm">
+                  <strong>Note:</strong> The employer will be able to view and verify the authenticity of these certificates.
+                </p>
+              </div>
+
+              <button 
+                onClick={shareCertificates}
+                disabled={sharing}
+                className="w-full bg-gradient-to-r from-cyan-600 to-purple-600 hover:from-cyan-700 hover:to-purple-700 text-white py-3 px-4 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {sharing ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" /> Sharing...
+                  </span>
+                ) : (
+                  <span className="flex items-center justify-center gap-2">
+                    <Share2 className="w-4 h-4" /> Share Certificates
+                  </span>
+                )}
+              </button>
+            </div>
           </div>
         )}
 
@@ -400,9 +633,17 @@ const CertificatesViewer = () => {
               <div className="flex items-center justify-between p-4 border-b border-slate-700">
                 <div className="flex items-center gap-3">
                   <FileText className="w-6 h-6 text-cyan-400" />
-                  <h2 className="text-xl font-bold text-white">
-                    {selectedCert?.title || 'Certificate Viewer'}
-                  </h2>
+                  <div>
+                    <h2 className="text-xl font-bold text-white">
+                      {selectedCert?.title || 'Certificate Viewer'}
+                    </h2>
+                    {selectedCert?.isVerified && (
+                      <div className="flex items-center gap-1 text-xs text-green-400 mt-1">
+                        <CheckCircle className="w-3 h-3" />
+                        <span>Verified by {selectedCert.verifiedBy?.institutionName}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center gap-2">
                   {selectedCert?.pdf && (
