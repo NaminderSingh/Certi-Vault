@@ -212,7 +212,7 @@ export default function EmployerDashboard() {
               </div>
             </Link>
 
-            <Link href="/dashboard/employer/students" className="group">
+            <Link href="/dashboard/employer/view-shared" className="group">
               <div className="bg-gradient-to-r from-purple-500/20 to-pink-600/20 border border-purple-500/30 rounded-2xl p-6 hover:border-purple-500/60 transition-all transform hover:scale-105">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">

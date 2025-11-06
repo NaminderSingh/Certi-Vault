@@ -6,20 +6,24 @@ import {
   User,
   Mail,
   Shield,
+  Award,
   CheckCircle,
   Clock,
   Calendar,
+  Key,
   Trash2,
   AlertTriangle,
   Loader2,
+  Eye,
+  EyeOff,
+  Copy,
+  CheckCheck,
   ExternalLink,
   Users,
-  FileText,
-  Eye,
-  Award
+  FileText
 } from 'lucide-react';
 
-const EmployerProfile = () => {
+const InstitutionProfile = () => {
   const { data: session, status } = useSession();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -29,6 +33,10 @@ const EmployerProfile = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteEmail, setDeleteEmail] = useState('');
   const [deleting, setDeleting] = useState(false);
+
+  // Encryption key state
+  const [showKey, setShowKey] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (status === 'authenticated') {
@@ -41,7 +49,7 @@ const EmployerProfile = () => {
       setLoading(true);
       setError(null);
 
-      const res = await fetch('/api/employerprofile');
+      const res = await fetch('/api/institutionprofile');
       if (!res.ok) {
         const errorData = await res.json();
         throw new Error(errorData.error || 'Failed to fetch profile');
@@ -67,6 +75,18 @@ const EmployerProfile = () => {
     });
   };
 
+  const copyToClipboard = async () => {
+    if (!profile?.encryptionKey) return;
+
+    try {
+      await navigator.clipboard.writeText(profile.encryptionKey);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      alert('Failed to copy to clipboard');
+    }
+  };
+
   const handleDeleteAccount = async () => {
     if (!deleteEmail || deleteEmail !== session.user.email) {
       alert('Please enter your email correctly to confirm deletion');
@@ -75,7 +95,7 @@ const EmployerProfile = () => {
 
     setDeleting(true);
     try {
-      const res = await fetch('/api/employerprofile', {
+      const res = await fetch('/api/institutionprofile', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ confirmEmail: deleteEmail })
@@ -84,7 +104,7 @@ const EmployerProfile = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to delete account');
 
-      alert('Account deleted successfully. You will be signed out.');
+      alert('Account deleted successfully. All verified certificates have been unmarked. You will be signed out.');
       await signOut({ callbackUrl: '/' });
     } catch (err) {
       console.error('Delete account error:', err);
@@ -123,9 +143,9 @@ const EmployerProfile = () => {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent mb-2">
-            Employer Profile
+            Institution Profile
           </h1>
-          <p className="text-slate-400">Manage your employer account and settings</p>
+          <p className="text-slate-400">Manage your institution account and settings</p>
         </div>
 
         {/* Error Message */}
@@ -140,7 +160,7 @@ const EmployerProfile = () => {
 
         {/* Profile Information Card */}
         <div className="bg-slate-800/30 backdrop-blur-md border border-slate-700 rounded-2xl p-6 mb-6">
-          <h2 className="text-xl font-bold text-cyan-400 mb-6">Company Information</h2>
+          <h2 className="text-xl font-bold text-cyan-400 mb-6">Institution Information</h2>
           
           <div className="flex flex-col md:flex-row gap-6">
             {/* Profile Picture */}
@@ -153,7 +173,7 @@ const EmployerProfile = () => {
                 />
               ) : (
                 <div className="w-24 h-24 bg-gradient-to-r from-cyan-500 to-purple-600 rounded-full flex items-center justify-center">
-                  <User className="w-12 h-12 text-white" />
+                  <Shield className="w-12 h-12 text-white" />
                 </div>
               )}
             </div>
@@ -163,7 +183,7 @@ const EmployerProfile = () => {
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
                   <label className="text-slate-400 text-sm flex items-center gap-2 mb-1">
-                    <User className="w-4 h-4" /> Company/Name
+                    <Award className="w-4 h-4" /> Institution Name
                   </label>
                   <p className="text-white font-medium text-lg">{profile?.name}</p>
                 </div>
@@ -179,7 +199,7 @@ const EmployerProfile = () => {
                   <label className="text-slate-400 text-sm flex items-center gap-2 mb-1">
                     <Shield className="w-4 h-4" /> Role
                   </label>
-                  <span className="inline-flex px-3 py-1 bg-green-500/20 text-green-400 border border-green-500/30 rounded-full text-sm font-medium">
+                  <span className="inline-flex px-3 py-1 bg-purple-500/20 text-purple-400 border border-purple-500/30 rounded-full text-sm font-medium">
                     {profile?.role}
                   </span>
                 </div>
@@ -204,17 +224,29 @@ const EmployerProfile = () => {
 
         {/* Statistics Card */}
         <div className="bg-slate-800/30 backdrop-blur-md border border-slate-700 rounded-2xl p-6 mb-6">
-          <h2 className="text-xl font-bold text-cyan-400 mb-6">Activity Statistics</h2>
+          <h2 className="text-xl font-bold text-cyan-400 mb-6">Verification Statistics</h2>
           
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-slate-700/30 rounded-xl p-4">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 bg-cyan-500/20 rounded-lg flex items-center justify-center">
                   <FileText className="w-6 h-6 text-cyan-400" />
                 </div>
                 <div>
-                  <p className="text-slate-400 text-sm">Certificates Received</p>
-                  <p className="text-2xl font-bold text-white">{profile?.stats?.totalShared || 0}</p>
+                  <p className="text-slate-400 text-sm">Certificates Issued</p>
+                  <p className="text-2xl font-bold text-white">{profile?.stats?.totalCertificatesIssued || 0}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-slate-700/30 rounded-xl p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-yellow-500/20 rounded-lg flex items-center justify-center">
+                  <Clock className="w-6 h-6 text-yellow-400" />
+                </div>
+                <div>
+                  <p className="text-slate-400 text-sm">Pending Requests</p>
+                  <p className="text-2xl font-bold text-white">{profile?.stats?.pendingRequests || 0}</p>
                 </div>
               </div>
             </div>
@@ -225,8 +257,8 @@ const EmployerProfile = () => {
                   <CheckCircle className="w-6 h-6 text-green-400" />
                 </div>
                 <div>
-                  <p className="text-slate-400 text-sm">Verified Certificates</p>
-                  <p className="text-2xl font-bold text-white">{profile?.stats?.verifiedCount || 0}</p>
+                  <p className="text-slate-400 text-sm">Approved This Month</p>
+                  <p className="text-2xl font-bold text-white">{profile?.stats?.approvedThisMonth || 0}</p>
                 </div>
               </div>
             </div>
@@ -234,105 +266,60 @@ const EmployerProfile = () => {
             <div className="bg-slate-700/30 rounded-xl p-4">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center">
-                  <Eye className="w-6 h-6 text-purple-400" />
+                  <Users className="w-6 h-6 text-purple-400" />
                 </div>
                 <div>
-                  <p className="text-slate-400 text-sm">Reviewed</p>
-                  <p className="text-2xl font-bold text-white">{profile?.stats?.reviewedCertificates || 0}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-slate-700/30 rounded-xl p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-yellow-500/20 rounded-lg flex items-center justify-center">
-                  <Users className="w-6 h-6 text-yellow-400" />
-                </div>
-                <div>
-                  <p className="text-slate-400 text-sm">Unique Students</p>
+                  <p className="text-slate-400 text-sm">Total Students</p>
                   <p className="text-2xl font-bold text-white">{profile?.stats?.totalStudents || 0}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-slate-700/30 rounded-xl p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center">
-                  <Shield className="w-6 h-6 text-blue-400" />
-                </div>
-                <div>
-                  <p className="text-slate-400 text-sm">Authenticity Checks</p>
-                  <p className="text-2xl font-bold text-white">{profile?.stats?.totalAuthenticityChecks || 0}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-slate-700/30 rounded-xl p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-orange-500/20 rounded-lg flex items-center justify-center">
-                  <Clock className="w-6 h-6 text-orange-400" />
-                </div>
-                <div>
-                  <p className="text-slate-400 text-sm">Pending Review</p>
-                  <p className="text-2xl font-bold text-white">
-                    {(profile?.stats?.totalShared || 0) - (profile?.stats?.reviewedCertificates || 0)}
-                  </p>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Insights Card */}
+        {/* Signing Key Card */}
         <div className="bg-slate-800/30 backdrop-blur-md border border-slate-700 rounded-2xl p-6 mb-6">
-          <h2 className="text-xl font-bold text-cyan-400 mb-4">Account Insights</h2>
+          <h2 className="text-xl font-bold text-cyan-400 mb-4 flex items-center gap-2">
+            <Key className="w-5 h-5" /> Digital Signature Key
+          </h2>
           
-          <div className="space-y-4">
-            <div className="bg-slate-700/30 rounded-xl p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-slate-300 font-medium">Verification Rate</span>
-                <span className="text-cyan-400 font-bold">
-                  {profile?.stats?.totalShared > 0 
-                    ? Math.round((profile.stats.verifiedCount / profile.stats.totalShared) * 100)
-                    : 0}%
-                </span>
+          <div className="bg-slate-700/30 rounded-xl p-4 mb-4">
+            <p className="text-slate-300 text-sm mb-3">
+              Your signing key is used to create digital signatures when verifying certificates. This key proves your institution's authenticity.
+            </p>
+            
+            <div className="flex items-center gap-2">
+              <div className="flex-1 bg-slate-900 rounded-lg p-3 font-mono text-sm overflow-x-auto">
+                {showKey ? (
+                  <span className="text-cyan-400 break-all">{profile?.encryptionKey}</span>
+                ) : (
+                  <span className="text-slate-500">{'•'.repeat(64)}</span>
+                )}
               </div>
-              <div className="w-full bg-slate-600 rounded-full h-2">
-                <div 
-                  className="bg-gradient-to-r from-cyan-500 to-green-500 h-2 rounded-full transition-all duration-500"
-                  style={{ 
-                    width: `${profile?.stats?.totalShared > 0 
-                      ? (profile.stats.verifiedCount / profile.stats.totalShared) * 100
-                      : 0}%` 
-                  }}
-                />
-              </div>
-              <p className="text-slate-400 text-xs mt-2">
-                {profile?.stats?.verifiedCount || 0} out of {profile?.stats?.totalShared || 0} certificates are verified
-              </p>
+              
+              <button
+                onClick={() => setShowKey(!showKey)}
+                className="p-3 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors"
+                title={showKey ? 'Hide key' : 'Show key'}
+              >
+                {showKey ? <EyeOff className="w-5 h-5 text-slate-300" /> : <Eye className="w-5 h-5 text-slate-300" />}
+              </button>
+              
+              <button
+                onClick={copyToClipboard}
+                className="p-3 bg-cyan-600 hover:bg-cyan-700 rounded-lg transition-colors"
+                title="Copy to clipboard"
+              >
+                {copied ? <CheckCheck className="w-5 h-5 text-white" /> : <Copy className="w-5 h-5 text-white" />}
+              </button>
             </div>
+          </div>
 
-            <div className="bg-slate-700/30 rounded-xl p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-slate-300 font-medium">Review Progress</span>
-                <span className="text-purple-400 font-bold">
-                  {profile?.stats?.totalShared > 0 
-                    ? Math.round((profile.stats.reviewedCertificates / profile.stats.totalShared) * 100)
-                    : 0}%
-                </span>
-              </div>
-              <div className="w-full bg-slate-600 rounded-full h-2">
-                <div 
-                  className="bg-gradient-to-r from-purple-500 to-pink-500 h-2 rounded-full transition-all duration-500"
-                  style={{ 
-                    width: `${profile?.stats?.totalShared > 0 
-                      ? (profile.stats.reviewedCertificates / profile.stats.totalShared) * 100
-                      : 0}%` 
-                  }}
-                />
-              </div>
-              <p className="text-slate-400 text-xs mt-2">
-                {profile?.stats?.reviewedCertificates || 0} out of {profile?.stats?.totalShared || 0} certificates reviewed
+          <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-3">
+            <div className="flex items-start gap-2">
+              <Shield className="w-5 h-5 text-purple-400 flex-shrink-0 mt-0.5" />
+              <p className="text-purple-400 text-sm">
+                <strong>Security Notice:</strong> This key is used to sign all certificates you verify. Keep it secure and never share it with unauthorized parties.
               </p>
             </div>
           </div>
@@ -347,10 +334,10 @@ const EmployerProfile = () => {
               Deleting your account will:
             </p>
             <ul className="list-disc list-inside text-slate-400 text-sm space-y-1">
-              <li>Remove your employer profile permanently</li>
-              <li>Delete all shared certificate records ({profile?.stats?.totalShared || 0} records)</li>
-              <li>Remove all review notes and authenticity check history</li>
-              <li>This action cannot be undone</li>
+              <li>Remove your institution profile permanently</li>
+              <li>Unverify all certificates you've signed ({profile?.stats?.totalCertificatesIssued || 0} certificates)</li>
+              <li>Delete all pending verification requests ({profile?.stats?.pendingRequests || 0} requests)</li>
+              <li>Remove your digital signing key</li>
             </ul>
           </div>
 
@@ -359,7 +346,7 @@ const EmployerProfile = () => {
             className="w-full flex items-center justify-center gap-2 bg-red-600/20 hover:bg-red-600/30 border border-red-600/50 text-red-400 py-3 px-4 rounded-xl transition-all"
           >
             <Trash2 className="w-5 h-5" />
-            Delete Employer Account
+            Delete Institution Account
           </button>
         </div>
 
@@ -371,18 +358,18 @@ const EmployerProfile = () => {
                 <div className="w-12 h-12 bg-red-500/20 rounded-xl flex items-center justify-center">
                   <AlertTriangle className="w-6 h-6 text-red-400" />
                 </div>
-                <h2 className="text-xl font-bold text-white">Delete Employer Account</h2>
+                <h2 className="text-xl font-bold text-white">Delete Institution Account</h2>
               </div>
 
               <div className="mb-4">
                 <p className="text-slate-300 mb-4">
-                  This action is <strong className="text-red-400">permanent and cannot be undone</strong>. This will remove:
+                  This action is <strong className="text-red-400">permanent and cannot be undone</strong>. This will affect:
                 </p>
                 <ul className="list-disc list-inside text-slate-400 text-sm space-y-1 mb-4">
-                  <li>{profile?.stats?.totalShared || 0} shared certificate record(s)</li>
-                  <li>All review notes and comments</li>
-                  <li>{profile?.stats?.totalAuthenticityChecks || 0} authenticity check(s) history</li>
-                  <li>Your entire employer profile</li>
+                  <li>{profile?.stats?.totalCertificatesIssued || 0} verified certificate(s) will be unmarked</li>
+                  <li>{profile?.stats?.pendingRequests || 0} pending request(s) will be deleted</li>
+                  <li>Your digital signing key will be permanently removed</li>
+                  <li>All institution data will be erased</li>
                 </ul>
               </div>
 
@@ -433,4 +420,4 @@ const EmployerProfile = () => {
   );
 };
 
-export default EmployerProfile;
+export default InstitutionProfile;
