@@ -263,7 +263,7 @@ export default function StudentCertificatesPage() {
           <h2 className="text-2xl font-bold text-white mb-4">Error Loading Certificates</h2>
           <p className="text-red-400 mb-6">{error}</p>
           <Link 
-            href="/dashboard/employer/shared"
+            href="/dashboard/employer/view-shared"
             className="inline-flex items-center gap-2 bg-cyan-600 hover:bg-cyan-700 text-white px-6 py-3 rounded-xl transition-all"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -279,7 +279,7 @@ export default function StudentCertificatesPage() {
       <div className="max-w-7xl mx-auto p-6">
         {/* Back Button */}
         <Link 
-          href="/dashboard/employer/shared"
+          href="/dashboard/employer/view-shared"
           className="inline-flex items-center gap-2 text-cyan-400 hover:text-cyan-300 mb-6 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />

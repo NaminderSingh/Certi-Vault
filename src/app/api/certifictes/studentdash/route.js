@@ -4,10 +4,11 @@ import connectDB from "@/lib/db";
 import Certificate from "@/models/certificate";
 import User from "@/models/user";
 import VerificationRequest from "@/models/VerificationRequest";
+import SharedCertificate from "@/models/SharedCertificate";
 
 export async function GET(req) {
   await connectDB();
-//hello form 
+
   try {
     // Get user session
     const session = await getServerSession(authOptions);
@@ -45,10 +46,10 @@ export async function GET(req) {
       student: userId
     });
 
-    // 2. Count verified certificates (where verifiedBy is not null)
+    // 2. Count verified certificates - FIXED: Use correct nested path
     const verifiedCertificates = await Certificate.countDocuments({
       student: userId,
-      verifiedBy: { $ne: null }
+      "verification.isVerified": true
     });
 
     // 3. Count pending verification requests
@@ -57,9 +58,37 @@ export async function GET(req) {
       status: "pending"
     });
 
-    // 4. Optional: Get list of shared documents (if you have a sharing mechanism)
-    // For now, we'll set it to 0 or you can implement your own logic
-    const sharedDocuments = 0;
+    // 4. Count shared documents - FIXED: Query from SharedCertificate model
+    const sharedDocuments = await SharedCertificate.countDocuments({
+      student: userId
+    });
+
+    // 5. BONUS: Get verification rate percentage
+    const verificationRate = totalCertificates > 0 
+      ? Math.round((verifiedCertificates / totalCertificates) * 100) 
+      : 0;
+
+    // 6. BONUS: Count distinct employers shared with
+    const distinctEmployers = await SharedCertificate.distinct('employer', {
+      student: userId
+    });
+    const employersSharedWith = distinctEmployers.length;
+
+    // 7. BONUS: Get recent activity (last 5 certificates)
+    const recentCertificates = await Certificate.find({
+      student: userId
+    })
+      .select('title createdAt verification.isVerified')
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .lean();
+
+    const recentActivity = recentCertificates.map(cert => ({
+      id: cert._id,
+      title: cert.title,
+      uploadedAt: cert.createdAt,
+      isVerified: cert.verification?.isVerified || false
+    }));
 
     // Return the stats
     return new Response(
@@ -69,8 +98,11 @@ export async function GET(req) {
           totalCertificates,
           verifiedCertificates,
           pendingRequests,
-          sharedDocuments
+          sharedDocuments,
+          verificationRate,
+          employersSharedWith
         },
+        recentActivity,
         user: {
           name: dbUser.name,
           email: dbUser.email,
@@ -87,7 +119,7 @@ export async function GET(req) {
         error: "Failed to fetch dashboard statistics",
         details: error.message 
       }),
-      { status: 500 }
+      { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }
 }

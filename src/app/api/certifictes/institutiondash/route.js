@@ -1,3 +1,4 @@
+// app/api/certifictes/institutiondash/route.js
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
@@ -5,6 +6,7 @@ import Certificate from "@/models/certificate";
 import User from "@/models/user";
 import VerificationRequest from "@/models/VerificationRequest";
 
+// ✅ Named export - no "default"
 export async function GET(req) {
   await connectDB();
 
@@ -43,7 +45,8 @@ export async function GET(req) {
 
     // 1. Count total certificates verified by this institution
     const totalCertificates = await Certificate.countDocuments({
-      verifiedBy: institutionName
+      "verification.isVerified": true,
+      "verification.verifiedBy.institutionId": institutionId
     });
 
     // 2. Count pending verification requests for this institution
@@ -60,13 +63,15 @@ export async function GET(req) {
     todayEnd.setHours(23, 59, 59, 999);
 
     const approvedToday = await Certificate.countDocuments({
-      verifiedBy: institutionName,
-      updatedAt: { $gte: todayStart, $lte: todayEnd }
+      "verification.isVerified": true,
+      "verification.verifiedBy.institutionId": institutionId,
+      "verification.signature.timestamp": { $gte: todayStart, $lte: todayEnd }
     });
 
     // 4. Count distinct students who have certificates verified by this institution
     const certificatesWithStudents = await Certificate.find({
-      verifiedBy: institutionName
+      "verification.isVerified": true,
+      "verification.verifiedBy.institutionId": institutionId
     }).select('student').lean();
 
     // Extract unique student IDs
@@ -97,6 +102,32 @@ export async function GET(req) {
       certificateId: req.certificate?._id
     }));
 
+    // 6. BONUS: Get monthly verification trend (last 6 months)
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+    const monthlyVerifications = await Certificate.aggregate([
+      {
+        $match: {
+          "verification.isVerified": true,
+          "verification.verifiedBy.institutionId": institutionId,
+          "verification.signature.timestamp": { $gte: sixMonthsAgo }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            year: { $year: "$verification.signature.timestamp" },
+            month: { $month: "$verification.signature.timestamp" }
+          },
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $sort: { "_id.year": 1, "_id.month": 1 }
+      }
+    ]);
+
     // Return the stats
     return new Response(
       JSON.stringify({
@@ -108,6 +139,7 @@ export async function GET(req) {
           totalStudents
         },
         recentRequests: formattedRequests,
+        monthlyTrend: monthlyVerifications,
         institution: {
           name: dbUser.name,
           email: dbUser.email,
@@ -124,7 +156,7 @@ export async function GET(req) {
         error: "Failed to fetch dashboard statistics",
         details: error.message 
       }),
-      { status: 500 }
+      { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }
 }

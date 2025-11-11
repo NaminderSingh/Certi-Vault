@@ -73,14 +73,14 @@ export default function UploadCertificate() {
     
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const droppedFile = e.dataTransfer.files[0];
-      const allowedTypes = ["application/pdf", "image/jpeg", "image/jpg", "image/png"];
       
-      if (allowedTypes.includes(droppedFile.type)) {
+      // ✅ Only allow PDF files
+      if (droppedFile.type === "application/pdf") {
         setFile(droppedFile);
         setMessage("");
         setMessageType("");
       } else {
-        setMessage("Please upload PDF, JPG, or PNG files only.");
+        setMessage("Only PDF files are allowed. Please upload a PDF certificate.");
         setMessageType("error");
       }
     }
@@ -89,14 +89,13 @@ export default function UploadCertificate() {
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
     if (selectedFile) {
-      const allowedTypes = ["application/pdf", "image/jpeg", "image/jpg", "image/png"];
-      
-      if (allowedTypes.includes(selectedFile.type)) {
+      // ✅ Only allow PDF files
+      if (selectedFile.type === "application/pdf") {
         setFile(selectedFile);
         setMessage("");
         setMessageType("");
       } else {
-        setMessage("Please upload PDF, JPG, or PNG files only.");
+        setMessage("Only PDF files are allowed. Please upload a PDF certificate.");
         setMessageType("error");
       }
     }
@@ -164,29 +163,9 @@ export default function UploadCertificate() {
     }
   };
 
-  const getFileIcon = () => {
-    if (!file) return <FileText className="w-5 h-5" />;
-    
-    if (file.type === "application/pdf") {
-      return <FileText className="w-5 h-5 text-red-400" />;
-    }
-    return <FileText className="w-5 h-5 text-blue-400" />;
-  };
-
-  const getFileColor = () => {
-    if (!file) return "text-slate-400";
-    
-    if (file.type === "application/pdf") {
-      return "text-red-400";
-    }
-    return "text-blue-400";
-  };
-
   return (
-    <div className="h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white flex items-center justify-center p-4">
-      <div className="max-w-4xl w-full max-h-[80vh] overflow-y-auto">
-         
-
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white flex items-center justify-center p-4">
+      <div className="max-w-4xl w-full">
         <div className="grid lg:grid-cols-2 gap-6">
           {/* Form Section */}
           <div className="bg-slate-800/30 backdrop-blur-md border border-slate-700 rounded-2xl p-6">
@@ -228,7 +207,7 @@ export default function UploadCertificate() {
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">
                   <Upload className="w-4 h-4 inline mr-2" />
-                  Certificate File (PDF, JPG, PNG)
+                  Certificate File (PDF Only)
                 </label>
                 
                 {loading ? (
@@ -272,15 +251,15 @@ export default function UploadCertificate() {
                   >
                     <Upload className={`w-10 h-10 mx-auto mb-3 ${dragActive ? "text-cyan-400" : "text-slate-400"}`} />
                     <p className="text-slate-300 font-medium mb-1 text-sm">
-                      Drop your certificate here or click to browse
+                      Drop your PDF certificate here or click to browse
                     </p>
                     <p className="text-slate-500 text-xs">
-                      Supports PDF, JPG, PNG files (Max 10MB)
+                      Only PDF files accepted (Max 10MB)
                     </p>
                     <input
                       ref={fileInputRef}
                       type="file"
-                      accept=".pdf,.jpg,.jpeg,.png"
+                      accept=".pdf,application/pdf"
                       onChange={handleFileChange}
                       className="hidden"
                     />
@@ -290,10 +269,8 @@ export default function UploadCertificate() {
                   <div className="w-full bg-slate-700/50 border border-slate-600 rounded-xl p-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                          file.type === "application/pdf" ? "bg-red-500/20" : "bg-blue-500/20"
-                        }`}>
-                          {getFileIcon()}
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-red-500/20">
+                          <FileText className="w-5 h-5 text-red-400" />
                         </div>
                         <div>
                           <p className="font-medium text-white text-sm">{file.name}</p>
@@ -386,6 +363,16 @@ export default function UploadCertificate() {
                   </div>
                 </div>
               </div>
+            </div>
+
+            <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-4">
+              <h4 className="text-sm font-bold text-red-400 mb-2 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4" />
+                Important Notice
+              </h4>
+              <p className="text-slate-300 text-xs">
+                Only PDF files are accepted for certificate uploads. Please ensure your certificate is in PDF format before uploading.
+              </p>
             </div>
 
             <div className="bg-slate-800/20 border border-slate-700 rounded-2xl p-4">
