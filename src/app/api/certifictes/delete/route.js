@@ -4,6 +4,7 @@ import connectDB from "@/lib/db";
 import Certificate from "@/models/certificate";
 import User from "@/models/user";
 import VerificationRequest from "@/models/VerificationRequest";
+import SharedCertificate from "@/models/SharedCertificate";
 
 export async function DELETE(req) {
   await connectDB();
@@ -73,6 +74,11 @@ export async function DELETE(req) {
       certificate: certificateId
     });
 
+    // Delete all associated shared certificates
+    const deletedSharedCertificates = await SharedCertificate.deleteMany({
+      certificate: certificateId
+    });
+
     // Delete the certificate
     await Certificate.findByIdAndDelete(certificateId);
 
@@ -83,8 +89,9 @@ export async function DELETE(req) {
     return new Response(
       JSON.stringify({ 
         success: true,
-        message: "Certificate and associated verification requests deleted successfully",
-        deletedVerificationRequests: deletedRequests.deletedCount
+        message: "Certificate and associated data deleted successfully",
+        deletedVerificationRequests: deletedRequests.deletedCount,
+        deletedSharedCertificates: deletedSharedCertificates.deletedCount
       }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );
