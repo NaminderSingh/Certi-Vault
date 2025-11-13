@@ -74,7 +74,7 @@ export default function ManageRequestsPage() {
   const handleReject = async (requestId) => {
     setProcessingId(requestId);
     try {
-      const res = await fetch("/api/certificates/verify", {
+      const res = await fetch("/api/certifictes/verify", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ requestId }),

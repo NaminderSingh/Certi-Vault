@@ -37,6 +37,12 @@ export default function Navbar() {
           <div className="flex items-center gap-6">
             
             <Link 
+              href="/dashboard/student" 
+              className="text-slate-300 hover:text-cyan-400 transition-colors duration-200 font-medium"
+            >
+              Dashboard 
+            </Link>
+            <Link 
               href="/dashboard/student/upload" 
               className="text-slate-300 hover:text-cyan-400 transition-colors duration-200 font-medium"
             >
@@ -60,6 +66,12 @@ export default function Navbar() {
         {/* Institution Navigation */}
         {session?.user?.role === "institution" && (
           <div className="flex items-center gap-6">
+            <Link 
+              href="/dashboard/institution" 
+              className="text-slate-300 hover:text-cyan-400 transition-colors duration-200 font-medium"
+            >
+              Dashboard 
+            </Link>
             <Link 
               href="/dashboard/institution/issue" 
               className="text-slate-300 hover:text-cyan-400 transition-colors duration-200 font-medium"
@@ -85,17 +97,18 @@ export default function Navbar() {
         {session?.user?.role === "employer" && (
           <div className="flex items-center gap-6">
             <Link 
+              href="/dashboard/employer" 
+              className="text-slate-300 hover:text-cyan-400 transition-colors duration-200 font-medium"
+            >
+              Dashboard
+            </Link>
+            <Link 
               href="/dashboard/employer/view-shared" 
               className="text-slate-300 hover:text-cyan-400 transition-colors duration-200 font-medium"
             >
               View shared Certificates
             </Link>
-            <Link 
-              href="/dashboard/employer/history" 
-              className="text-slate-300 hover:text-cyan-400 transition-colors duration-200 font-medium"
-            >
-              History
-            </Link>
+           
             <Link 
               href="/dashboard/employer/profile" 
               className="text-slate-300 hover:text-cyan-400 transition-colors duration-200 font-medium"
